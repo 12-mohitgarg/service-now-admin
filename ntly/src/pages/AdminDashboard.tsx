@@ -12,7 +12,7 @@ import { createUserWithEmailAndPassword, deleteUser, getAuth, signOut, User as F
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { auth } from '../lib/firebase';
 import { useNavigate, Link } from 'react-router-dom';
-import firebaseConfig from '../../firebase-applet-config.json';
+import firebaseConfig from '../../firebase-applet-config';
 import {
   CURRENT_INTERNSHIP_START_DATE,
   INTERNSHIP_DOMAINS,
