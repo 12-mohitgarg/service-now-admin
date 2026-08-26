@@ -1,0 +1,15 @@
+/api/payment/order /.netlify/functions/payment-order 200
+/api/payment/verify /.netlify/functions/payment-verify 200
+/api/payment/webhook /.netlify/functions/payment-webhook 200
+/api/payment/reconcile /.netlify/functions/payment-reconcile 200
+/api/admin/import-students /.netlify/functions/admin-import-students 200
+/api/admin/users/:uid/password /.netlify/functions/admin-user-password?uid=:uid 200
+/api/admin/users/:uid/email /.netlify/functions/admin-user-email?uid=:uid 200
+/api/admin/users/:uid/profile /.netlify/functions/admin-user-profile?uid=:uid 200
+/api/admin/college-users /.netlify/functions/admin-college-user 200
+
+/api/admin/sub-users/:uid /.netlify/functions/admin-sub-user?uid=:uid 200
+/api/auth/college-profile /.netlify/functions/auth-college-profile 200
+/api/admin/payment-settings /.netlify/functions/admin-payment-settings 200
+/api/offer-letter-email /.netlify/functions/offer-letter-email 200
+/* /index.html 200

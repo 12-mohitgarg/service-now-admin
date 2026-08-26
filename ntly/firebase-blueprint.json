@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Extended user profile information for INTERNMITRA students",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "fullName": { "type": "string" },
+        "gender": { "type": "string", "enum": ["Male", "Female", "Other"] },
+        "parentName": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "university": { "type": "string" },
+        "college": { "type": "string" },
+        "degree": { "type": "string", "enum": ["UG", "PG"] },
+        "department": { "type": "string" },
+        "subject": { "type": "string" },
+        "session": { "type": "string" },
+        "semester": { "type": "string" },
+        "universityRoll": { "type": "string" },
+        "internshipDomain": { "type": "string" },
+        "emergencyContactName": { "type": "string" },
+        "emergencyContactNumber": { "type": "string" },
+        "emergencyRelationship": { "type": "string" },
+        "isPaid": { "type": "boolean" },
+        "registrationDate": { "type": "string", "format": "date-time" },
+        "learningHours": { "type": "number" },
+        "progress": { "type": "number" }
+      },
+      "required": ["uid", "fullName", "email", "isPaid"]
+    },
+    "Payment": {
+      "title": "Payment Record",
+      "description": "Records of ₹500 registration fee payments",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "razorpayOrderId": { "type": "string" },
+        "razorpayPaymentId": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "razorpayPaymentId", "amount"]
+    },
+    "Assignment": {
+      "title": "Assignment Submission",
+      "description": "Practical tasks and live projects submitted by students",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "domain": { "type": "string" },
+        "title": { "type": "string" },
+        "submissionUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["Submitted", "Graded"] },
+        "score": { "type": "number" },
+        "feedback": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Student profiles and academic info"
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Registration fee transactions"
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Assignment",
+      "description": "Student project submissions"
+    }
+  }
+}

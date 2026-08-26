@@ -1,0 +1,87 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "nft"
+  included_files = ["public/offer-letter-header.png", "public/ff.png", "public/dded.jpeg"]
+
+[functions."payment-reconcile-scheduled"]
+  schedule = "*/5 * * * *"
+
+[[redirects]]
+  from = "/api/payment/order"
+  to = "/.netlify/functions/payment-order"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment/verify"
+  to = "/.netlify/functions/payment-verify"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment/webhook"
+  to = "/.netlify/functions/payment-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/payment/reconcile"
+  to = "/.netlify/functions/payment-reconcile"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/import-students"
+  to = "/.netlify/functions/admin-import-students"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/users/:uid/password"
+  to = "/.netlify/functions/admin-user-password?uid=:uid"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/users/:uid/email"
+  to = "/.netlify/functions/admin-user-email?uid=:uid"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/users/:uid/profile"
+  to = "/.netlify/functions/admin-user-profile?uid=:uid"
+  status = 200
+
+
+[[redirects]]
+  from = "/api/admin/college-users"
+  to = "/.netlify/functions/admin-college-user"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/sub-users/:uid"
+  to = "/.netlify/functions/admin-sub-user?uid=:uid"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/student-login-identifier"
+  to = "/.netlify/functions/auth-student-login-identifier"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/college-profile"
+  to = "/.netlify/functions/auth-college-profile"
+  status = 200
+
+[[redirects]]
+  from = "/api/admin/payment-settings"
+  to = "/.netlify/functions/admin-payment-settings"
+  status = 200
+
+[[redirects]]
+  from = "/api/offer-letter-email"
+  to = "/.netlify/functions/offer-letter-email"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

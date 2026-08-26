@@ -1,0 +1,306 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // --- Global Safety Net ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+       function isAdmin() { 
+      return isSignedIn() && 
+        (request.auth.token.email == "gargmohit8306@gmail.com" ||
+         request.auth.token.email == "admin@internmitra.com" ||
+         (
+           exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+           get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role in ['admin', 'super_admin']
+         ));
+    }
+    function isTeacher() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'teacher';
+    }
+    function isSubUser() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'sub_user';
+    }
+    function isDistrictUser() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.isActive == true &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'district_user';
+    }
+    function districtUserDistrictNames() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.districtNames is list
+        ? get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.districtNames
+        : [];
+    }
+    function isEmitra() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/emitras/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/emitras/$(request.auth.uid)).data.isActive == true;
+    }
+    function isCollegeUser() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/collegeUsers/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/collegeUsers/$(request.auth.uid)).data.isActive == true;
+    }
+    function collegeUserName() {
+      return get(/databases/$(database)/documents/collegeUsers/$(request.auth.uid)).data.collegeName;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function teacherCourse() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.course;
+    }
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function paymentProtectedFieldsChanged() {
+      return incoming().diff(existing()).affectedKeys().hasAny([
+        'isPaid',
+        'hasPaid',
+        'paymentStatus',
+        'paymentVerifiedAt',
+        'paymentRejectedAt',
+        'razorpayOrderId',
+        'razorpayPaymentId',
+        'paymentMethod',
+        'paymentSource'
+      ]);
+    }
+    function onlyPaymentProtectedFieldsChanged() {
+      return incoming().diff(existing()).affectedKeys().hasOnly([
+        'isPaid',
+        'hasPaid',
+        'paymentStatus',
+        'paymentVerifiedAt',
+        'paymentRejectedAt',
+        'razorpayOrderId',
+        'razorpayPaymentId',
+        'paymentMethod',
+        'paymentSource'
+      ]);
+    }
+
+    // --- Collection Rules ---
+
+  match /users/{userId} {
+
+  // Single user read
+  allow get: if isValidId(userId) &&
+              isSignedIn() &&
+              (request.auth.uid == userId || isAdmin() || isSubUser() || (isDistrictUser() && resource.data.district in districtUserDistrictNames()) || (isEmitra() && resource.data.createdByEmitraId == request.auth.uid) || (isCollegeUser() && resource.data.college == collegeUserName()));
+
+  // Query/search allow for certificate verification
+  allow list: if true;
+
+  // Create own profile
+  allow create: if isSignedIn() &&
+                 (request.auth.uid == userId ||
+                  (isEmitra() && request.resource.data.createdByEmitraId == request.auth.uid) ||
+                  (isSubUser() && request.resource.data.createdBySubUserId == request.auth.uid));
+
+  // Update own profile or admin
+  allow update: if isSignedIn() &&
+                 (isAdmin() ||
+                  (isSubUser() && onlyPaymentProtectedFieldsChanged()) ||
+                  (request.auth.uid == userId && !paymentProtectedFieldsChanged()) ||
+                  (isEmitra() && resource.data.createdByEmitraId == request.auth.uid && !paymentProtectedFieldsChanged()));
+}
+
+    match /payments/{paymentId} {
+      // Admins manage the verification queue
+      allow read: if isAdmin() || isSubUser();
+      allow write: if isAdmin() || isSubUser();
+      allow get, list: if isEmitra() && resource.data.createdByEmitraId == request.auth.uid;
+
+      // Users can read their own verified payment records. Creation is server-only.
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /paymentOrders/{orderId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /privateSettings/{settingId} {
+      allow read, write: if false;
+    }
+
+    match /settings/{settingId} {
+      // Settings (like Offer Letter templates) are public for reading
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      // Generic submissions collection (used for assignments/labs)
+       allow get: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+    }
+    match /admins/{adminId} {
+      allow get: if (isSignedIn() && adminId == request.auth.uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin() && resource.data.role in ['sub_user', 'district_user'];
+    }
+    match /emitras/{emitraId} {
+      allow get: if (isSignedIn() && emitraId == request.auth.uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && emitraId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+
+    match /collegeUsers/{collegeUserId} {
+      allow get: if (isSignedIn() && collegeUserId == request.auth.uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isAdmin();
+    }
+     match /districts/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /colleges/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /courses/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+      match /universities/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+     match /degrees/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+   match /counters/{docId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+    
+   match /dailyVideos/{docId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || (isTeacher() && incoming().course == teacherCourse());
+      allow delete: if isAdmin() || (isTeacher() && existing().course == teacherCourse());
+    }
+    
+      match /assignments/{assignmentId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /attendance/{attendanceId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        (isTeacher() && resource.data.course == teacherCourse());
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().course is string &&
+        incoming().day is number &&
+        incoming().videoId is string;
+    }
+
+    match /courseCompletion/{docId} {
+      allow read: if true;
+      allow create, update: if isAdmin() || (isTeacher() && incoming().course == teacherCourse());
+    }
+
+    
+  match /userVideoProgress/{docId} {
+      allow read, write: if isSignedIn();
+    }
+
+    match /courseTests/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isTeacher();
+    }
+
+    match /testSubmissions/{docId} {
+      allow read: if isAdmin() || isTeacher() || (isSignedIn() && (resource == null || resource.data.userId == request.auth.uid));
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+    }
+    // Internal connection test path
+    match /_connection_test/{docId} {
+      allow get: if true;
+    }
+    match /courseCompletion/{docId} {
+  allow read: if isSignedIn();
+  allow write: if isAdmin() || isTeacher();
+}
+match /attendance/{attendanceId} {
+  allow read, write: if isSignedIn();
+}
+match /userVideoProgress/{docId} {
+  allow read, write: if isSignedIn();
+}
+
+
+    match /notifications/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /loginLogs/{logId} {
+      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn() &&
+        incoming().userId == request.auth.uid &&
+        incoming().keys().hasOnly(['userId', 'studentName', 'email', 'internshipDomain', 'loggedAt', 'loginAtIso', 'status', 'userAgent', 'platform']);
+      allow update, delete: if isAdmin();
+    }
+    
+    match /courseReports/{reportId} {
+  allow read: if isSignedIn();
+  allow create, update, delete: if isAdmin();
+}
+
+
+
+ match /courseReports/{reportId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /studentReports/{reportId} {
+      allow get, list: if isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid) ||
+        (isTeacher() && resource.data.course == teacherCourse());
+      allow create: if isSignedIn() &&
+        incoming().keys().hasOnly(['userId', 'studentName', 'email', 'course', 'description', 'fileName', 'fileUrl', 'cloudinaryPublicId', 'uploadedAt']) &&
+        incoming().userId == request.auth.uid &&
+        incoming().course is string &&
+        incoming().fileName is string &&
+        incoming().fileUrl is string &&
+        incoming().uploadedAt is string;
+    }
+
+match /courseReports/{reportId} {
+  allow read: if isSignedIn();
+  allow create, update, delete: if isAdmin();
+}
+
+    match /importedStudents/{studentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
