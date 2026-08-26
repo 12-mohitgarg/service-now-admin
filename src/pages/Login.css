@@ -1,0 +1,27 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 20% 20%, rgba(108, 92, 231, 0.15), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(0, 217, 163, 0.12), transparent 40%), var(--color-bg);
+}
+
+.login-card {
+  width: 380px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-card h1 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.login-subtitle {
+  margin: -8px 0 4px;
+  color: var(--color-text-dim);
+  font-size: 13px;
+}
